@@ -482,14 +482,17 @@ class NukkiApp(ctk.CTk):
     
     def _add_images(self, file_paths: list[str]):
         """이미지 추가"""
-        # 초기 안내 위젯 완전히 제거 (pack/grid 충돌 방지)
-        if hasattr(self, 'drop_label') and self.drop_label.winfo_exists():
-            self.drop_label.destroy()
-        if hasattr(self, 'initial_select_button') and self.initial_select_button.winfo_exists():
-            self.initial_select_button.destroy()
+        # 초기 안내 위젯 제거 (첫 번째 호출에서만)
+        if not hasattr(self, '_initial_widgets_removed'):
+            try:
+                self.drop_label.destroy()
+                self.initial_select_button.destroy()
+            except:
+                pass
+            self._initial_widgets_removed = True
         
-        # 이미지 카드 그리드 생성
-        for i, path in enumerate(file_paths):
+        # 새 카드들 생성 (위치 지정 없이)
+        for path in file_paths:
             card = ImageCard(
                 self.scrollable_frame,
                 path,
@@ -497,14 +500,10 @@ class NukkiApp(ctk.CTk):
                 width=240,
                 height=290
             )
-            
-            # 그리드 배치 (한 줄에 4개)
-            row = (len(self.image_cards) + i) // 4
-            col = (len(self.image_cards) + i) % 4
-            card.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
-            
             self.image_cards.append(card)
         
+        # 전체 카드 재배치
+        self._rearrange_cards()
         self._update_status(f"{len(self.image_cards)}개 이미지 로드됨")
     
     def _toggle_select_all(self):
@@ -540,11 +539,17 @@ class NukkiApp(ctk.CTk):
             self._update_status(f"{len(self.image_cards)}개 이미지 남음")
     
     def _rearrange_cards(self):
-        """카드 그리드 재배치"""
-        for i, card in enumerate(self.image_cards):
-            row = i // 4
-            col = i % 4
-            card.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
+        """카드 그리드 재배치 (한 행에 4개씩, 꽉 차면 다음 행으로)"""
+        # 그리드 열 설정
+        for c in range(4):
+            self.scrollable_frame.grid_columnconfigure(c, weight=1, uniform="card_col")
+        
+        # 모든 카드 재배치
+        for idx, card in enumerate(self.image_cards):
+            card.grid_forget()  # 기존 배치 제거
+            row = idx // 4      # 행 번호
+            col = idx % 4       # 열 번호 (0-3)
+            card.grid(row=row, column=col, padx=10, pady=10, sticky="n")
     
     def _show_preview(self, image: Image.Image, title: str):
         """이미지 미리보기 팝업"""
@@ -719,6 +724,10 @@ class NukkiApp(ctk.CTk):
             card.destroy()
         
         self.image_cards.clear()
+        
+        # 초기 위젯 플래그 초기화 (다시 초기 화면 표시 가능하도록)
+        if hasattr(self, '_initial_widgets_removed'):
+            delattr(self, '_initial_widgets_removed')
         
         # 안내 다시 표시
         self.drop_label = ctk.CTkLabel(
