@@ -235,6 +235,7 @@ class NukkiApp(ctk.CTk):
         self.use_gemini = ctk.BooleanVar(value=False)
         self.select_all_var = ctk.BooleanVar(value=True)  # 전체 선택
         self.quality_var = ctk.StringVar(value="normal")  # 품질 모드
+        self.auto_detect_var = ctk.BooleanVar(value=True)  # 인물 자동 감지
         self.processing = False
         
         # 저장된 API 키 로드
@@ -407,6 +408,20 @@ class NukkiApp(ctk.CTk):
             dropdown_hover_color=("#e2e8f0", "#334155")
         )
         self.quality_dropdown.pack(side="left", padx=(0, 10))
+        
+        # 인물 자동감지 체크박스
+        self.auto_detect_checkbox = ctk.CTkCheckBox(
+            left_frame,
+            text="인물감지",
+            font=ctk.CTkFont(size=12),
+            variable=self.auto_detect_var,
+            onvalue=True,
+            offvalue=False,
+            corner_radius=4,
+            fg_color=("#f59e0b", "#d97706"),
+            hover_color=("#d97706", "#b45309")
+        )
+        self.auto_detect_checkbox.pack(side="left", padx=(0, 10))
         
         # Gemini 후처리 체크박스
         self.gemini_checkbox = ctk.CTkCheckBox(
@@ -679,9 +694,18 @@ class NukkiApp(ctk.CTk):
                 self.after(0, lambda c=card: c.set_status("처리 중...", "#f59e0b"))
                 self.after(0, lambda idx=i+1, t=total: self._update_status(f"처리 중... ({idx}/{t})"))
                 
-                # 배경 제거 (선택된 품질 모드 사용)
+                # 배경 제거 (선택된 품질 모드 + 인물 자동 감지)
                 quality = self.quality_var.get()
-                result = remover.remove_background(card.image_path, quality=quality)
+                auto_detect = self.auto_detect_var.get()
+                result, is_person = remover.remove_background(
+                    card.image_path, 
+                    quality=quality,
+                    auto_detect_person=auto_detect
+                )
+                
+                # 인물 감지 시 상태 표시
+                if is_person:
+                    self.after(0, lambda c=card: c.set_status("인물 감지됨 👤", "#f59e0b"))
                 
                 # Gemini 후처리 (선택적)
                 if processor and self.use_gemini.get():
