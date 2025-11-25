@@ -19,6 +19,31 @@ class BackgroundRemover:
         'silueta',            # 빠르고 괜찮은 품질
     ]
     
+    # 품질 프리셋 (머리카락 등 디테일 보존 최적화)
+    QUALITY_PRESETS = {
+        'fast': {  # 빠름 - 디테일 적음
+            'alpha_matting': False,
+            'foreground_threshold': 240,
+            'background_threshold': 10,
+            'erode_size': 10,
+            'blur_radius': 0
+        },
+        'normal': {  # 일반 - 균형
+            'alpha_matting': True,
+            'foreground_threshold': 240,
+            'background_threshold': 10,
+            'erode_size': 10,
+            'blur_radius': 0.5
+        },
+        'high': {  # 고품질 - 머리카락 등 디테일 최대 보존
+            'alpha_matting': True,
+            'foreground_threshold': 220,
+            'background_threshold': 5,
+            'erode_size': 5,
+            'blur_radius': 0.3
+        }
+    }
+    
     def __init__(self, model_name: str = 'birefnet-general'):
         """
         BackgroundRemover 초기화
@@ -39,10 +64,7 @@ class BackgroundRemover:
     def remove_background(
         self,
         input_image: Union[str, Path, Image.Image],
-        alpha_matting: bool = True,
-        alpha_matting_foreground_threshold: int = 270,
-        alpha_matting_background_threshold: int = 20,
-        alpha_matting_erode_size: int = 15,
+        quality: str = 'normal',
         post_process_mask: bool = True
     ) -> Image.Image:
         """
@@ -50,15 +72,15 @@ class BackgroundRemover:
         
         Args:
             input_image: 입력 이미지 (파일 경로 또는 PIL Image 객체)
-            alpha_matting: 알파 매팅 사용 여부 (가장자리를 더 부드럽게 처리)
-            alpha_matting_foreground_threshold: 전경 임계값 (높을수록 더 많은 영역을 전경으로)
-            alpha_matting_background_threshold: 배경 임계값 (낮을수록 더 많은 영역을 배경으로)
-            alpha_matting_erode_size: 침식 크기 (가장자리 정교함)
+            quality: 품질 모드 ('fast', 'normal', 'high')
             post_process_mask: 마스크 후처리 여부
             
         Returns:
             배경이 제거된 PIL Image 객체 (RGBA)
         """
+        # 품질 프리셋 가져오기
+        preset = self.QUALITY_PRESETS.get(quality, self.QUALITY_PRESETS['normal'])
+        
         # 입력 이미지 로드
         if isinstance(input_image, (str, Path)):
             img = Image.open(input_image)
@@ -74,15 +96,16 @@ class BackgroundRemover:
             result = remove(
                 img,
                 session=self._get_session(),
-                alpha_matting=alpha_matting,
-                alpha_matting_foreground_threshold=alpha_matting_foreground_threshold,
-                alpha_matting_background_threshold=alpha_matting_background_threshold,
-                alpha_matting_erode_size=alpha_matting_erode_size,
+                alpha_matting=preset['alpha_matting'],
+                alpha_matting_foreground_threshold=preset['foreground_threshold'],
+                alpha_matting_background_threshold=preset['background_threshold'],
+                alpha_matting_erode_size=preset['erode_size'],
                 post_process_mask=post_process_mask
             )
         
-        # 가장자리 부드럽게 처리
-        result = self._smooth_edges(result)
+        # 가장자리 부드럽게 처리 (blur_radius가 0보다 클 때만)
+        if preset['blur_radius'] > 0:
+            result = self._smooth_edges(result, preset['blur_radius'])
         
         return result
     

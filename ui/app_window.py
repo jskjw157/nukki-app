@@ -234,6 +234,7 @@ class NukkiApp(ctk.CTk):
         self.api_key: str = ""
         self.use_gemini = ctk.BooleanVar(value=False)
         self.select_all_var = ctk.BooleanVar(value=True)  # 전체 선택
+        self.quality_var = ctk.StringVar(value="normal")  # 품질 모드
         self.processing = False
         
         # 저장된 API 키 로드
@@ -380,12 +381,37 @@ class NukkiApp(ctk.CTk):
             hover_color=("#2563eb", "#1d4ed8"),
             command=self._toggle_select_all
         )
-        self.select_all_checkbox.pack(side="left", padx=(0, 15))
+        self.select_all_checkbox.pack(side="left", padx=(0, 10))
+        
+        # 품질 선택 라벨
+        quality_label = ctk.CTkLabel(
+            left_frame,
+            text="품질:",
+            font=ctk.CTkFont(size=12),
+            text_color=("#64748b", "#94a3b8")
+        )
+        quality_label.pack(side="left", padx=(0, 3))
+        
+        # 품질 선택 드롭다운
+        self.quality_dropdown = ctk.CTkOptionMenu(
+            left_frame,
+            variable=self.quality_var,
+            values=["fast", "normal", "high"],
+            width=90,
+            height=28,
+            font=ctk.CTkFont(size=11),
+            fg_color=("#3b82f6", "#2563eb"),
+            button_color=("#2563eb", "#1d4ed8"),
+            button_hover_color=("#1d4ed8", "#1e40af"),
+            dropdown_fg_color=("#f8fafc", "#1e293b"),
+            dropdown_hover_color=("#e2e8f0", "#334155")
+        )
+        self.quality_dropdown.pack(side="left", padx=(0, 10))
         
         # Gemini 후처리 체크박스
         self.gemini_checkbox = ctk.CTkCheckBox(
             left_frame,
-            text="Gemini AI 후처리",
+            text="AI 후처리",
             font=ctk.CTkFont(size=12),
             variable=self.use_gemini,
             onvalue=True,
@@ -653,8 +679,9 @@ class NukkiApp(ctk.CTk):
                 self.after(0, lambda c=card: c.set_status("처리 중...", "#f59e0b"))
                 self.after(0, lambda idx=i+1, t=total: self._update_status(f"처리 중... ({idx}/{t})"))
                 
-                # 배경 제거 (isnet-general-use 모델 + alpha matting)
-                result = remover.remove_background(card.image_path)
+                # 배경 제거 (선택된 품질 모드 사용)
+                quality = self.quality_var.get()
+                result = remover.remove_background(card.image_path, quality=quality)
                 
                 # Gemini 후처리 (선택적)
                 if processor and self.use_gemini.get():
