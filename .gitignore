@@ -1,0 +1,43 @@
+# 가상환경
+.venv/
+venv/
+env/
+
+# Python 캐시
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 배포/빌드
+build/
+dist/
+*.egg-info/
+*.egg
+
+# IDE/에디터
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 로그
+*.log
+
+# 테스트/커버리지
+.pytest_cache/
+.coverage
+htmlcov/
+
+# rembg 모델 캐시 (용량이 크므로)
+.u2net/
+
+# 사용자 설정 (API 키 포함)
+.nukki_config.json
+
+# 임시 파일
+*.tmp
+*.temp
+
