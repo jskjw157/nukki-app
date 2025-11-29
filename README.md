@@ -154,5 +154,3 @@ MIT License
 
 ---
 
-Made with ❤️ by AI Assistant
-
